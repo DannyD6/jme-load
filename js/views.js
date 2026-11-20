@@ -1,4 +1,35 @@
 "use strict";
+
+/* ---------- autocomplete (replaces <datalist>, whose popup blocks typing on iPad) ---------- */
+function acBox(inp,opts){
+  const box=h("div",{class:"acbox",role:"listbox"});
+  const wrap=h("div",{class:"acwrap"+(inp.classList.contains("full")?" full":"")},inp,box);
+  let hi=-1,shown=[];
+  const close=()=>{box.classList.remove("open");box.textContent="";hi=-1;shown=[];};
+  const pick=v=>{inp.value=v;close();inp.dispatchEvent(new Event("change"));};
+  const paint=()=>[...box.children].forEach((b,i)=>b.classList.toggle("hi",i===hi));
+  const show=()=>{
+    const q=inp.value.trim().toLowerCase();
+    box.textContent="";hi=-1;
+    if(!q){close();return;}
+    shown=opts.filter(o=>{const l=o.toLowerCase();return l!==q&&l.includes(q);})
+      .sort((x,y)=>x.toLowerCase().indexOf(q)-y.toLowerCase().indexOf(q)).slice(0,8);
+    if(!shown.length){close();return;}
+    for(const o of shown) box.append(h("button",{type:"button",role:"option",tabindex:"-1",
+      onpointerdown:e=>e.preventDefault(),onmousedown:e=>e.preventDefault(),
+      onclick:()=>{pick(o);inp.focus({preventScroll:true});}},o));
+    box.classList.add("open");
+  };
+  inp.addEventListener("input",show);
+  inp.addEventListener("blur",()=>setTimeout(close,150));
+  inp.addEventListener("keydown",e=>{
+    if(!box.classList.contains("open")) return;
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();const n=shown.length;hi=e.key==="ArrowDown"?(hi+1)%n:(hi<=0?n-1:hi-1);paint();}
+    else if(e.key==="Enter"&&hi>=0){e.preventDefault();e.stopImmediatePropagation();pick(shown[hi]);}
+    else if(e.key==="Escape"){e.preventDefault();close();}
+  });
+  return wrap;
+}
 /* ---------- derived ---------- */
 const itemsFor=tr=>S.items.filter(i=>i.trailer===tr).sort((a,b)=>(a.ord||0)-(b.ord||0));
 function progress(tr){const its=itemsFor(tr);const done=its.filter(i=>i.done).length;return{total:its.length,done,pct:its.length?Math.round(done/its.length*100):0,short:its.filter(i=>i.short&&!i.done).length};}
@@ -168,11 +199,11 @@ function renderBoss(main){
     h("label",{class:"lb",for:"jobsIn",text:L.jobsL}),jobsIn));
 
   /* add */
-  const nameIn=h("input",{class:"field full",id:"nameIn",placeholder:L.itemPh,list:"knownItems",autocomplete:"off",maxlength:"80","aria-label":L.itemPh});
+  const nameIn=h("input",{class:"field full",id:"nameIn",placeholder:L.itemPh,autocomplete:"off",maxlength:"80","aria-label":L.itemPh});
   const qtyIn=h("input",{class:"field",id:"qtyIn",placeholder:L.qtyPh,autocomplete:"off",maxlength:"30","aria-label":L.qtyPh});
-  const colorIn=h("input",{class:"field",id:"colorIn",placeholder:L.colorPh,list:"knownColors",autocomplete:"off",maxlength:"30","aria-label":L.colorPh});
-  const known=h("datalist",{id:"knownItems"},[...new Set([...S.templates.flatMap(x=>x.items||[]),...S.daily].map(x=>x.name))].map(n=>h("option",{value:n})));
-  const colors=h("datalist",{id:"knownColors"},COLORS.map(n=>h("option",{value:n})));
+  const colorIn=h("input",{class:"field",id:"colorIn",placeholder:L.colorPh,autocomplete:"off",maxlength:"30","aria-label":L.colorPh});
+  const knownNames=[...new Set([...S.templates.flatMap(x=>x.items||[]),...S.daily].map(x=>x.name).filter(Boolean))];
+  const nameWrap=acBox(nameIn,knownNames),colorWrap=acBox(colorIn,COLORS);
   const doAdd=async()=>{
     const n=nameIn.value.trim(); if(!n){nameIn.focus();return;}
     const item={name:n,qty:qtyIn.value.trim(),color:colorIn.value.trim()};
@@ -184,7 +215,7 @@ function renderBoss(main){
   nameIn.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();doAdd();}});
   qtyIn.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();doAdd();}});
   const addCard=h("div",{class:"card"},h("h4",{text:L.add}),
-    h("div",{class:"addgrid"},nameIn,colorIn,qtyIn),known,colors,
+    h("div",{class:"addgrid"},nameWrap,colorWrap,qtyIn),
     h("button",{type:"button",class:"btn",id:"addBtn",onclick:doAdd},L.addBtn),
     h("label",{class:"lb",text:L.quick}),
     h("div",{class:"chips",id:"quickChips"},

@@ -53,7 +53,8 @@ function openEdit(it){
   const L=t();
   const n=h("input",{class:"field",id:"eName",maxlength:"80"}); n.value=it.name;
   const q=h("input",{class:"field",id:"eQty",placeholder:L.qtyPh,maxlength:"30"}); q.value=it.qty||"";
-  const c=h("input",{class:"field",id:"eColor",placeholder:L.colorPh,list:"knownColors",maxlength:"30"}); c.value=it.color||"";
+  const c=h("input",{class:"field",id:"eColor",placeholder:L.colorPh,autocomplete:"off",maxlength:"30"}); c.value=it.color||"";
+  const cWrap=acBox(c,COLORS);
   const cat=h("select",{class:"field",id:"eCat"},CAT_ORDER.map(k=>{const o=h("option",{value:k,text:L.cats[k]});if((it.cat||"material")===k)o.selected=true;return o;}));
   const save=()=>{
     const name=n.value.trim(); if(!name){n.focus();return;}
@@ -64,7 +65,7 @@ function openEdit(it){
   for(const el of [n,q,c]) el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();save();}});
   openSheet(h("h3",{text:L.editItem}),
     h("label",{class:"lb",for:"eName",text:L.itemPh}),n,
-    h("div",{class:"addgrid"},h("div",null,h("label",{class:"lb",for:"eColor",text:L.colorPh}),c),h("div",null,h("label",{class:"lb",for:"eQty",text:L.qtyPh}),q)),
+    h("div",{class:"addgrid"},h("div",null,h("label",{class:"lb",for:"eColor",text:L.colorPh}),cWrap),h("div",null,h("label",{class:"lb",for:"eQty",text:L.qtyPh}),q)),
     h("label",{class:"lb",for:"eCat",text:L.section}),cat,
     h("button",{type:"button",class:"btn",id:"eSave",onclick:save},L.save),
     h("button",{type:"button",class:"btn danger",onclick:()=>{closeSheet();quickDelete(it);}},L.del),
