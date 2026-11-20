@@ -1,27 +1,36 @@
 "use strict";
 
 /* ---------- autocomplete (replaces <datalist>, whose popup blocks typing on iPad) ---------- */
-function acBox(inp,opts){
+function acBox(inp,opts,listBtn){
   const box=h("div",{class:"acbox",role:"listbox"});
-  const wrap=h("div",{class:"acwrap"+(inp.classList.contains("full")?" full":"")},inp,box);
-  let hi=-1,shown=[];
-  const close=()=>{box.classList.remove("open");box.textContent="";hi=-1;shown=[];};
+  const wrap=h("div",{class:"acwrap"+(inp.classList.contains("full")?" full":"")+(listBtn?" haslist":"")},inp,box);
+  let hi=-1,shown=[],all=false;
+  const close=()=>{box.classList.remove("open");box.textContent="";hi=-1;shown=[];all=false;if(btn)btn.setAttribute("aria-expanded","false");};
+  box._close=close;
   const pick=v=>{inp.value=v;close();inp.dispatchEvent(new Event("change"));};
   const paint=()=>[...box.children].forEach((b,i)=>b.classList.toggle("hi",i===hi));
-  const show=()=>{
-    const q=inp.value.trim().toLowerCase();
-    box.textContent="";hi=-1;
-    if(!q){close();return;}
-    shown=opts.filter(o=>{const l=o.toLowerCase();return l!==q&&l.includes(q);})
-      .sort((x,y)=>x.toLowerCase().indexOf(q)-y.toLowerCase().indexOf(q)).slice(0,8);
+  const fill=list=>{
+    box.textContent="";hi=-1;shown=list;
     if(!shown.length){close();return;}
     for(const o of shown) box.append(h("button",{type:"button",role:"option",tabindex:"-1",
       onpointerdown:e=>e.preventDefault(),onmousedown:e=>e.preventDefault(),
-      onclick:()=>{pick(o);inp.focus({preventScroll:true});}},o));
-    box.classList.add("open");
+      onclick:()=>{const wasAll=all;pick(o);if(!wasAll)inp.focus({preventScroll:true});}},o));
+    box.classList.add("open");box.scrollTop=0;
   };
+  const show=()=>{
+    all=false;if(btn)btn.setAttribute("aria-expanded","false");
+    const q=inp.value.trim().toLowerCase();
+    if(!q){close();return;}
+    fill(opts.filter(o=>{const l=o.toLowerCase();return l!==q&&l.includes(q);})
+      .sort((x,y)=>x.toLowerCase().indexOf(q)-y.toLowerCase().indexOf(q)).slice(0,8));
+  };
+  /* ▾ button: show the whole list, tap one to fill the box (typing anything still works) */
+  const btn=listBtn?h("button",{type:"button",class:"acbtn","aria-label":listBtn,title:listBtn,"aria-expanded":"false",
+    onpointerdown:e=>e.preventDefault(),onmousedown:e=>e.preventDefault(),
+    onclick:()=>{if(all){close();return;}fill([...opts].sort((a,b)=>a.localeCompare(b)));all=true;btn.setAttribute("aria-expanded","true");}},"▾"):null;
+  if(btn) wrap.append(btn);
   inp.addEventListener("input",show);
-  inp.addEventListener("blur",()=>setTimeout(close,150));
+  inp.addEventListener("blur",()=>setTimeout(()=>{if(!all)close();},150));
   inp.addEventListener("keydown",e=>{
     if(!box.classList.contains("open")) return;
     if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();const n=shown.length;hi=e.key==="ArrowDown"?(hi+1)%n:(hi<=0?n-1:hi-1);paint();}
@@ -30,6 +39,8 @@ function acBox(inp,opts){
   });
   return wrap;
 }
+/* tapping anywhere else closes an open list */
+document.addEventListener("pointerdown",e=>{for(const b of document.querySelectorAll(".acbox.open")) if(!b.parentNode.contains(e.target)&&b._close) b._close();});
 /* ---------- derived ---------- */
 const itemsFor=tr=>S.items.filter(i=>i.trailer===tr).sort((a,b)=>(a.ord||0)-(b.ord||0));
 const jobsFor=tr=>S.jobs.filter(j=>j.trailer===tr).sort((a,b)=>(a.ord||0)-(b.ord||0));
@@ -97,7 +108,7 @@ function render(){
 
   /* keep whatever someone is typing when live updates redraw the page */
   const keep={},act=document.activeElement,actId=act&&act.id;
-  for(const id of ["nameIn","qtyIn","colorIn","leadIn","jobsIn"]){const el=$(id);if(el)keep[id]=el.value;}
+  for(const id of ["matIn","qtyIn","colorIn","leadIn","jobsIn"]){const el=$(id);if(el)keep[id]=el.value;}
   let selS=null,selE=null; try{if(act&&"selectionStart" in act){selS=act.selectionStart;selE=act.selectionEnd;}}catch(e){}
   const keepKey=S._formTr; S._formTr=S.trailer+"|"+S.date;
 
@@ -134,7 +145,7 @@ function render(){
   checkCelebrate();
   if(S.mode==="boss"&&isLead()) renderBoss(main); else renderCrew(main);
   if(keepKey===S._formTr){
-    for(const id of ["nameIn","qtyIn","colorIn"]) if(keep[id]!=null&&$(id)) $(id).value=keep[id];
+    for(const id of ["matIn","qtyIn","colorIn"]) if(keep[id]!=null&&$(id)) $(id).value=keep[id];
     for(const id of ["leadIn","jobsIn"]) if(actId===id&&$(id)) $(id).value=keep[id];
     if(actId&&keep[actId]!=null&&$(actId)){const el=$(actId);el.focus({preventScroll:true});try{if(selS!=null)el.setSelectionRange(selS,selE);}catch(e){}}
   }
@@ -182,7 +193,7 @@ function jobHead(sec,lead,tr){
       j&&j.notes?h("span",{class:"jn",text:j.notes}):null,
       j&&j.url?h("a",{href:j.url,target:"_blank",rel:"noopener",text:L.openJobber+" ›"}):null),
     h("span",{class:"cnt",text:`${done}/${sec.items.length}`}),
-    lead?h("button",{type:"button",class:"iconbtn","aria-label":L.addHere,title:L.addHere,onclick:()=>{S.formJob[tr]=sec.id;render();const f=$("nameIn");if(f){f.scrollIntoView({block:"center"});f.focus({preventScroll:true});}}},"+"):null,
+    lead?h("button",{type:"button",class:"iconbtn","aria-label":L.addHere,title:L.addHere,onclick:()=>{S.formJob[tr]=sec.id;render();const f=$("matIn");if(f){f.scrollIntoView({block:"center"});f.focus({preventScroll:true});}}},"+"):null,
     lead&&j?h("button",{type:"button",class:"iconbtn","aria-label":L.editJob,title:L.editJob,onclick:()=>openJob(tr,j)},"✎"):null);
 }
 function renderCrew(main){
@@ -229,11 +240,11 @@ function renderBoss(main){
     h("label",{class:"lb",for:"jobsIn",text:L.jobsL}),jobsIn));
 
   /* add */
-  const nameIn=h("input",{class:"field full",id:"nameIn",placeholder:L.itemPh,autocomplete:"off",maxlength:"80","aria-label":L.itemPh});
+  const nameIn=h("input",{class:"field full",id:"matIn",name:"jme-mat",type:"text",placeholder:L.itemPh,autocomplete:"off",autocapitalize:"sentences",maxlength:"80","aria-label":L.matAria});
   const qtyIn=h("input",{class:"field",id:"qtyIn",placeholder:L.qtyPh,autocomplete:"off",maxlength:"30","aria-label":L.qtyPh});
-  const colorIn=h("input",{class:"field",id:"colorIn",placeholder:L.colorPh,autocomplete:"off",maxlength:"30","aria-label":L.colorPh});
+  const colorIn=h("input",{class:"field",id:"colorIn",name:"jme-color",type:"text",placeholder:L.colorPh,autocomplete:"off",maxlength:"30","aria-label":L.colorPh});
   const knownNames=[...new Set([...S.templates.flatMap(x=>x.items||[]),...S.daily].map(x=>x.name).concat(EXTRA_ITEMS).filter(Boolean))];
-  const nameWrap=acBox(nameIn,knownNames),colorWrap=acBox(colorIn,COLORS);
+  const nameWrap=acBox(nameIn,knownNames,L.matList),colorWrap=acBox(colorIn,COLORS,L.colorList);
   const secs=sectionsFor(tr),cj=curJob(tr),cs=secs.find(s=>s.id===cj),cjName=cs.job?cs.job.name:L.wholeTr;
   const doAdd=async()=>{
     const n=nameIn.value.trim(); if(!n){nameIn.focus();return;}
@@ -241,7 +252,7 @@ function renderBoss(main){
     if(cs.items.some(i=>norm(i.name)===norm(n))){toast(L.dup);return;}
     nameIn.value=""; qtyIn.value="";
     addItems(tr,[item],false,cj);
-    const f=$("nameIn"); if(f) f.focus();
+    const f=$("matIn"); if(f) f.focus();
   };
   nameIn.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();doAdd();}});
   qtyIn.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();doAdd();}});
