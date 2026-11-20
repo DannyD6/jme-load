@@ -206,3 +206,15 @@ textarea.field{resize:vertical;min-height:64px}
 .shops .chip[aria-pressed="true"]{background:var(--sky);border-color:var(--sky);color:var(--navy-900)}
 .otherrow{display:flex;gap:8px}
 .otherrow .btn{flex:none;padding:11px 16px;font-size:17px}
+/* job sections */
+.jobhead{display:flex;align-items:center;gap:10px;margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--navy-700);border:1px solid var(--line);border-left:4px solid var(--sky)}
+.jobhead.whole{border-left-color:var(--mute)}
+.jobhead .jt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.jobhead b{font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:.5px;text-transform:uppercase;line-height:1.1;overflow-wrap:anywhere}
+.jobhead .jt span{font-size:13px;color:var(--mute);overflow-wrap:anywhere}
+.jobhead .jt .jn{white-space:pre-wrap;color:var(--white);opacity:.85}
+.jobhead a{color:var(--sky);font-size:13px;font-weight:700}
+.jobhead .cnt{flex:none;font-weight:700;font-size:14px;color:var(--mute);font-variant-numeric:tabular-nums}
+.jobhead .iconbtn{color:var(--white)}
+.jobsel .chip[aria-pressed="true"]{background:var(--sky);border-color:var(--sky);color:var(--navy-900)}
+.note.nomat{padding:0 4px}

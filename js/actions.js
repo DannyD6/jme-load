@@ -15,8 +15,9 @@ function setPickup(it,shop){
   if(it._tmp) return; shop=(shop||"").trim().slice(0,40); buzz(30);
   write("jme_pickup",{p_token:S.token,p_item:it.id,p_shop:shop},()=>{it.pickup=shop;if(shop)it.short=false;},it.id).catch(()=>{});
 }
-async function addItems(tr,list,quiet){
-  const have=new Set(itemsFor(tr).map(i=>norm(i.name)));
+async function addItems(tr,list,quiet,job){
+  job=job&&S.jobs.some(j=>j.id===job&&j.trailer===tr)?job:null;
+  const have=new Set((sectionsFor(tr).find(s=>s.id===job)||{items:[]}).items.map(i=>norm(i.name)));
   const fresh=[];
   for(const x of list||[]){
     if(!x||!x.name||have.has(norm(x.name))) continue;
@@ -26,8 +27,8 @@ async function addItems(tr,list,quiet){
   if(!fresh.length){toast(t().dup);return;}
   const date=S.date; let ord=Math.max(0,...itemsFor(tr).map(i=>i.ord||0));
   try{
-    const n=await write("jme_add_items",{p_token:S.token,p_day:date,p_trailer:tr,p_items:fresh},()=>{
-      for(const f of fresh) S.items.push({id:"tmp"+Math.random().toString(36).slice(2),trailer:tr,name:f.name,qty:f.qty,color:f.color,cat:f.cat,ord:++ord,done:false,short:false,_tmp:true});
+    const n=await write("jme_add_job_items",{p_token:S.token,p_day:date,p_trailer:tr,p_job:job,p_items:fresh},()=>{
+      for(const f of fresh) S.items.push({id:"tmp"+Math.random().toString(36).slice(2),trailer:tr,job:job,name:f.name,qty:f.qty,color:f.color,cat:f.cat,ord:++ord,done:false,short:false,_tmp:true});
     });
     if(fresh.length>1) toast(t().addedN(n==null?fresh.length:n)); else buzz(12);
   }catch(e){}
@@ -78,22 +79,72 @@ function openEdit(it){
   const c=h("input",{class:"field",id:"eColor",placeholder:L.colorPh,autocomplete:"off",maxlength:"30"}); c.value=it.color||"";
   const cWrap=acBox(c,COLORS);
   const cat=h("select",{class:"field",id:"eCat"},CAT_ORDER.map(k=>{const o=h("option",{value:k,text:L.cats[k]});if((it.cat||"material")===k)o.selected=true;return o;}));
+  const jobs=jobsFor(it.trailer),curJ=it.job&&jobs.some(j=>j.id===it.job)?it.job:"";
+  const jobSel=jobs.length?h("select",{class:"field",id:"eJob"},[{id:"",name:L.wholeTr},...jobs].map(j=>{const o=h("option",{value:j.id,text:j.name});if(j.id===curJ)o.selected=true;return o;})):null;
   const save=()=>{
     const name=n.value.trim(); if(!name){n.focus();return;}
     const v={name:name.slice(0,80),qty:q.value.trim().slice(0,30),color:c.value.trim().slice(0,30),cat:cat.value};
+    const nj=jobSel?jobSel.value:curJ;
     closeSheet();
     write("jme_update_item",{p_token:S.token,p_item:it.id,p_name:v.name,p_qty:v.qty,p_color:v.color,p_cat:v.cat},()=>{Object.assign(it,v);},it.id).catch(()=>{});
+    if(nj!==curJ) write("jme_move_item",{p_token:S.token,p_item:it.id,p_job:nj||null},()=>{it.job=nj||null;},it.id).catch(()=>{});
   };
   for(const el of [n,q,c]) el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();save();}});
   openSheet(h("h3",{text:L.editItem}),
     h("label",{class:"lb",for:"eName",text:L.itemPh}),n,
     h("div",{class:"addgrid"},h("div",null,h("label",{class:"lb",for:"eColor",text:L.colorPh}),cWrap),h("div",null,h("label",{class:"lb",for:"eQty",text:L.qtyPh}),q)),
     h("label",{class:"lb",for:"eCat",text:L.section}),cat,
+    jobSel?[h("label",{class:"lb",for:"eJob",text:L.jobFor}),jobSel]:null,
     it.done?null:h("button",{type:"button",class:"btn ghost",onclick:()=>{closeSheet();openStatus(it);}},"🏪 "+L.moreBtn),
     h("button",{type:"button",class:"btn",id:"eSave",onclick:save},L.save),
     h("button",{type:"button",class:"btn danger",onclick:()=>{closeSheet();quickDelete(it);}},L.del),
     h("button",{type:"button",class:"btn ghost",onclick:closeSheet},L.cancel));
   if(!it.qty) q.focus();
+}
+/* add or edit a job (a section of the trailer's load) */
+function openJob(tr,job){
+  const L=t();
+  const n=h("input",{class:"field",id:"jName",placeholder:L.jobNamePh,maxlength:"80",autocomplete:"off"}); n.value=job?job.name:"";
+  const a=h("input",{class:"field",id:"jAddr",maxlength:"200",autocomplete:"off"}); a.value=job?job.address||"":"";
+  const no=h("textarea",{class:"field",id:"jNotes",maxlength:"2000",rows:"4"}); no.value=job?job.notes||"":"";
+  const trSel=job?h("select",{class:"field",id:"jTr"},TRAILERS.map(x=>{const o=h("option",{value:x,text:x==="old"?L.old:L.neu});if(x===job.trailer)o.selected=true;return o;})):null;
+  let busy=false;
+  const save=async()=>{
+    const name=n.value.trim().slice(0,80); if(!name){n.focus();return;}
+    if(busy) return; busy=true;
+    const v={name,address:a.value.trim().slice(0,200),notes:no.value.trim().slice(0,2000)};
+    closeSheet();
+    if(job){
+      const nt=trSel.value;
+      write("jme_update_job",{p_token:S.token,p_job:job.id,p_name:v.name,p_address:v.address,p_notes:v.notes,p_trailer:nt},()=>{
+        Object.assign(job,v);
+        if(nt!==job.trailer){job.trailer=nt;job.ord=1+Math.max(0,...jobsFor(nt).filter(x=>x!==job).map(x=>x.ord||0));for(const i of S.items) if(i.job===job.id) i.trailer=nt;}
+      },"job:"+job.id).catch(()=>{});
+    }else{
+      try{
+        const id=await write("jme_add_job",{p_token:S.token,p_day:S.date,p_trailer:tr,p_name:v.name,p_address:v.address,p_notes:v.notes});
+        if(id){S.formJob[tr]=id;if(!S.jobs.some(j=>j.id===id))S.jobs.push({id,trailer:tr,ord:1+Math.max(0,...jobsFor(tr).map(x=>x.ord||0)),url:"",...v});S.sig="";render();}
+      }catch(e){}
+    }
+  };
+  for(const el of [n,a]) el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();save();}});
+  let armed=false;
+  const cnt=job?S.items.filter(i=>i.job===job.id).length:0;
+  const delBtn=job?h("button",{type:"button",class:"btn danger",onclick:()=>{
+    if(!armed&&cnt){armed=true;delBtn.textContent=L.delJobN(cnt);return;}
+    closeSheet();
+    write("jme_delete_job",{p_token:S.token,p_job:job.id},()=>{S.jobs=S.jobs.filter(x=>x.id!==job.id);S.items=S.items.filter(i=>i.job!==job.id);},"job:"+job.id).catch(()=>{});
+  }},L.delJob):null;
+  openSheet(h("h3",{text:job?L.editJob:L.addJob}),
+    h("label",{class:"lb",for:"jName",text:L.jobName}),n,
+    h("label",{class:"lb",for:"jAddr",text:L.jobAddr}),a,
+    h("label",{class:"lb",for:"jNotes",text:L.jobNotes}),no,
+    trSel?[h("label",{class:"lb",for:"jTr",text:L.trailerL}),trSel]:null,
+    job&&job.url?h("a",{class:"linkbtn",href:job.url,target:"_blank",rel:"noopener",text:L.openJobber+" ›"}):null,
+    h("button",{type:"button",class:"btn",id:"jSave",onclick:save},L.save),
+    delBtn,
+    h("button",{type:"button",class:"btn ghost",onclick:closeSheet},L.cancel));
+  if(!job) n.focus();
 }
 function openForget(){
   const L=t();
@@ -115,13 +166,13 @@ const fromLines=txt=>txt.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{co
 const SPOUT_RE=/downspout|elbow|outlet|bajante|codo|salida|2x3|3x4/i;
 function to2x3(items){return (items||[]).map(x=>{const n=String(x.name||"");if(!SPOUT_RE.test(n))return x;
   return {...x,name:/3x4/i.test(n)?n.replace(/3x4/gi,"2x3"):(/2x3/i.test(n)?n:("2x3 "+n.charAt(0).toLowerCase()+n.slice(1)).slice(0,80))};});}
-function quickTpl(tr,tp){
+function quickTpl(tr,tp,job){
   const items=tp.items||[];
-  if(!items.some(x=>SPOUT_RE.test(String(x.name||"")))){addItems(tr,items,true);return;}
+  if(!items.some(x=>SPOUT_RE.test(String(x.name||"")))){addItems(tr,items,true,job);return;}
   const L=t(),name=S.lang==="es"&&tp.nameEs?tp.nameEs:tp.name;
   openSheet(h("h3",{text:name}),h("p",{class:"note",text:L.spoutQ}),
-    h("button",{type:"button",class:"btn",onclick:()=>{closeSheet();addItems(tr,items,true);}},L.spout34),
-    h("button",{type:"button",class:"btn ghost",onclick:()=>{closeSheet();addItems(tr,to2x3(items),true);}},L.spout23),
+    h("button",{type:"button",class:"btn",onclick:()=>{closeSheet();addItems(tr,items,true,job);}},L.spout34),
+    h("button",{type:"button",class:"btn ghost",onclick:()=>{closeSheet();addItems(tr,to2x3(items),true,job);}},L.spout23),
     h("button",{type:"button",class:"btn ghost",onclick:closeSheet},L.cancel));
 }
 function openTemplates(){
@@ -195,7 +246,11 @@ function shareList(){
   for(const tr of TRAILERS){
     const its=itemsFor(tr); if(!its.length) continue; const ld=S.loads[tr]||{};
     out+=`\n${(tr==="old"?L.old:L.neu).toUpperCase()}${ld.lead?` (${ld.lead})`:""}\n`;
-    for(const i of its) out+=`${i.done?"✅":i.pickup?"🏪":"⬜"} ${i.name}${i.qty?` – ${i.qty}`:""}${i.color?` – ${i.color}`:""}${i.pickup&&!i.done?` (${L.pickAt(i.pickup)})`:""}\n`;
+    const secs=sectionsFor(tr).filter(s=>s.items.length);
+    for(const s of secs){
+      if(secs.length>1||s.job) out+=`\n▸ ${s.job?s.job.name+(s.job.address?` – ${s.job.address}`:""):L.wholeTr}\n`;
+      for(const i of s.items) out+=`${i.done?"✅":i.pickup?"🏪":"⬜"} ${i.name}${i.qty?` – ${i.qty}`:""}${i.color?` – ${i.color}`:""}${i.pickup&&!i.done?` (${L.pickAt(i.pickup)})`:""}\n`;
+    }
   }
   shareText(out);
 }

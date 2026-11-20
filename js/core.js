@@ -23,7 +23,7 @@ function clearToken(){
 /* ---------- state ---------- */
 const S={
   lang:"en",mode:"crew",trailer:"old",date:null,
-  token:null,me:null,items:[],loads:{},templates:[],daily:[],forgets:[],streakStart:null,codes:null,members:[],
+  token:null,me:null,items:[],jobs:[],formJob:{},loads:{},templates:[],daily:[],forgets:[],streakStart:null,codes:null,members:[],
   loaded:false,loadedDay:null,offline:false,fatal:false,sig:"",busy:0,wseq:0,rseq:0,
   pending:new Set(),prevPct:{},_formTr:null,
   join:{step:"code",code:"",role:null,names:[],err:"",busy:false,typing:false,name:""},
@@ -85,7 +85,7 @@ function apply(d){
   const sig=JSON.stringify(d);
   if(sig===S.sig&&S.loaded&&S.loadedDay===S.date) return false;
   S.sig=sig; S.loaded=true; S.loadedDay=d.day;
-  S.me=d.me; S.items=d.items||[]; S.loads=d.loads||{}; S.templates=d.templates||[]; S.daily=d.daily||[];
+  S.me=d.me; S.items=d.items||[]; S.jobs=d.jobs||[]; S.loads=d.loads||{}; S.templates=d.templates||[]; S.daily=d.daily||[];
   S.forgets=d.forgets||[]; S.streakStart=d.streak_start||null; S.codes=d.codes||null; S.members=d.members||[];
   if(!isLead()) S.mode="crew";
   else if(!S._modeSet){S._modeSet=true;S.mode=store.get("jme_mode")==="crew"?"crew":"boss";}

@@ -32,6 +32,16 @@ function acBox(inp,opts){
 }
 /* ---------- derived ---------- */
 const itemsFor=tr=>S.items.filter(i=>i.trailer===tr).sort((a,b)=>(a.ord||0)-(b.ord||0));
+const jobsFor=tr=>S.jobs.filter(j=>j.trailer===tr).sort((a,b)=>(a.ord||0)-(b.ord||0));
+/* sections of a trailer: one per job, then the "whole trailer" section (id null) */
+function sectionsFor(tr){
+  const its=itemsFor(tr),jobs=jobsFor(tr),ids=new Set(jobs.map(j=>j.id));
+  const out=jobs.map(j=>({job:j,id:j.id,items:its.filter(i=>i.job===j.id)}));
+  out.push({job:null,id:null,items:its.filter(i=>!i.job||!ids.has(i.job))});
+  return out;
+}
+/* which section the lead's "add material" form adds to */
+const curJob=tr=>{const id=S.formJob[tr];return id&&S.jobs.some(j=>j.id===id&&j.trailer===tr)?id:null;};
 function progress(tr){const its=itemsFor(tr);const done=its.filter(i=>i.done).length;return{total:its.length,done,pct:its.length?Math.round(done/its.length*100):0,short:its.filter(i=>i.short&&!i.done).length,pick:its.filter(i=>i.pickup&&!i.done).length,get ready(){return this.total>0&&this.done+this.pick===this.total;}};}
 /* "QXO (Monroe): A, B · Senox: C" */
 function pickText(its){const g={};for(const i of its) if(i.pickup&&!i.done)(g[i.pickup]=g[i.pickup]||[]).push(i.name);return Object.entries(g).map(([s,n])=>`${s}: ${n.join(", ")}`).join(" · ");}
@@ -43,8 +53,8 @@ function streak(){
   return Math.max(0,daysBetween(start,today));
 }
 function relLabel(k){const d=daysBetween(todayKey(),k);if(d===0)return t().today;if(d===1)return t().tomorrow;if(d===-1)return t().yesterday;return "";}
-function suggestions(tr){
-  const its=itemsFor(tr); if(!its.length) return [];
+function suggestions(its){
+  if(!its.length) return [];
   const all=its.map(i=>i.name).join(" | ");
   const out=[],seen=new Set();
   for(const r of RULES){ if(!r.when.test(all)) continue;
@@ -164,22 +174,38 @@ function whoLine(it,withTime){
   let tm=""; if(withTime&&it.done_at){try{tm=" · "+new Date(it.done_at).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});}catch(e){}}
   return h("span",{class:"who",text:`✓ ${L.loadedBy} ${name}${tm}`});
 }
+function jobHead(sec,lead,tr){
+  const L=t(),j=sec.job,done=sec.items.filter(i=>i.done).length;
+  return h("div",{class:"jobhead"+(j?"":" whole")},
+    h("div",{class:"jt"},h("b",{text:j?j.name:L.wholeTr}),
+      j&&j.address?h("span",{text:j.address}):null,
+      j&&j.notes?h("span",{class:"jn",text:j.notes}):null,
+      j&&j.url?h("a",{href:j.url,target:"_blank",rel:"noopener",text:L.openJobber+" ›"}):null),
+    h("span",{class:"cnt",text:`${done}/${sec.items.length}`}),
+    lead?h("button",{type:"button",class:"iconbtn","aria-label":L.addHere,title:L.addHere,onclick:()=>{S.formJob[tr]=sec.id;render();const f=$("nameIn");if(f){f.scrollIntoView({block:"center"});f.focus({preventScroll:true});}}},"+"):null,
+    lead&&j?h("button",{type:"button",class:"iconbtn","aria-label":L.editJob,title:L.editJob,onclick:()=>openJob(tr,j)},"✎"):null);
+}
 function renderCrew(main){
   const L=t(),tr=S.trailer,its=itemsFor(tr);
   main.append(hero(tr));
   if(!its.length){main.append(h("div",{class:"empty"},h("b",{text:L.emptyCrewT}),L.emptyCrewP));return;}
-  for(const cat of CAT_ORDER){
-    const group=its.filter(i=>(i.cat||"material")===cat); if(!group.length) continue;
-    group.sort((a,b)=>(a.done-b.done)||((a.ord||0)-(b.ord||0)));
-    const g=h("section",{class:"group"},h("h3",null,h("span",{text:L.cats[cat]}),h("span",{text:`${group.filter(i=>i.done).length}/${group.length}`})));
-    for(const it of group){
-      g.append(h("div",{class:`row tap${it.done?" done":""}${it.short&&!it.done?" short":""}${it.pickup&&!it.done?" pick":""}`,role:"checkbox","aria-checked":it.done?"true":"false",tabindex:"0",
-        onclick:()=>toggleItem(it),onkeydown:e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();toggleItem(it);}}},
-        h("span",{class:"box"},checkSvg()),
-        h("div",{class:"mid"},h("span",{class:"nm",text:it.name}),tagsFor(it,false),whoLine(it,true)),
-        it.done?null:h("button",{type:"button",class:`iconbtn${it.short?" on":""}${it.pickup?" pick":""}`,"aria-label":L.moreBtn,title:L.moreBtn,onclick:e=>{e.stopPropagation();openStatus(it);}},"!")));
+  const secs=sectionsFor(tr),multi=secs.length>1;
+  for(const sec of secs){
+    if(!sec.items.length) continue;
+    if(multi) main.append(jobHead(sec,false,tr));
+    for(const cat of CAT_ORDER){
+      const group=sec.items.filter(i=>(i.cat||"material")===cat); if(!group.length) continue;
+      group.sort((a,b)=>(a.done-b.done)||((a.ord||0)-(b.ord||0)));
+      const g=h("section",{class:"group"},h("h3",null,h("span",{text:L.cats[cat]}),h("span",{text:`${group.filter(i=>i.done).length}/${group.length}`})));
+      for(const it of group){
+        g.append(h("div",{class:`row tap${it.done?" done":""}${it.short&&!it.done?" short":""}${it.pickup&&!it.done?" pick":""}`,role:"checkbox","aria-checked":it.done?"true":"false",tabindex:"0",
+          onclick:()=>toggleItem(it),onkeydown:e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();toggleItem(it);}}},
+          h("span",{class:"box"},checkSvg()),
+          h("div",{class:"mid"},h("span",{class:"nm",text:it.name}),tagsFor(it,false),whoLine(it,true)),
+          it.done?null:h("button",{type:"button",class:`iconbtn${it.short?" on":""}${it.pickup?" pick":""}`,"aria-label":L.moreBtn,title:L.moreBtn,onclick:e=>{e.stopPropagation();openStatus(it);}},"!")));
+      }
+      main.append(g);
     }
-    main.append(g);
   }
 }
 function renderBoss(main){
@@ -208,45 +234,55 @@ function renderBoss(main){
   const colorIn=h("input",{class:"field",id:"colorIn",placeholder:L.colorPh,autocomplete:"off",maxlength:"30","aria-label":L.colorPh});
   const knownNames=[...new Set([...S.templates.flatMap(x=>x.items||[]),...S.daily].map(x=>x.name).concat(EXTRA_ITEMS).filter(Boolean))];
   const nameWrap=acBox(nameIn,knownNames),colorWrap=acBox(colorIn,COLORS);
+  const secs=sectionsFor(tr),cj=curJob(tr),cs=secs.find(s=>s.id===cj),cjName=cs.job?cs.job.name:L.wholeTr;
   const doAdd=async()=>{
     const n=nameIn.value.trim(); if(!n){nameIn.focus();return;}
     const item={name:n,qty:qtyIn.value.trim(),color:colorIn.value.trim()};
-    if(itemsFor(tr).some(i=>norm(i.name)===norm(n))){toast(L.dup);return;}
+    if(cs.items.some(i=>norm(i.name)===norm(n))){toast(L.dup);return;}
     nameIn.value=""; qtyIn.value="";
-    addItems(tr,[item]);
+    addItems(tr,[item],false,cj);
     const f=$("nameIn"); if(f) f.focus();
   };
   nameIn.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();doAdd();}});
   qtyIn.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();doAdd();}});
   const addCard=h("div",{class:"card"},h("h4",{text:L.add}),
+    h("label",{class:"lb",text:L.addTo}),
+    h("div",{class:"chips jobsel",id:"jobSel"},
+      secs.map(s=>h("button",{type:"button",class:"chip","aria-pressed":String(s.id===cj),onclick:()=>{S.formJob[tr]=s.id;render();}},s.job?s.job.name:L.wholeTr)),
+      h("button",{type:"button",class:"chip tpl",id:"addJobBtn",onclick:()=>openJob(tr,null)},"+ "+L.addJob)),
     h("div",{class:"addgrid"},nameWrap,colorWrap,qtyIn),
-    h("button",{type:"button",class:"btn",id:"addBtn",onclick:doAdd},L.addBtn),
+    h("button",{type:"button",class:"btn",id:"addBtn",onclick:doAdd},L.addToBtn(cjName)),
     h("label",{class:"lb",text:L.quick}),
     h("div",{class:"chips",id:"quickChips"},
-      S.templates.map(tp=>h("button",{type:"button",class:"chip tpl",onclick:()=>quickTpl(tr,tp)},"+ "+(S.lang==="es"&&tp.nameEs?tp.nameEs:tp.name))),
-      S.daily.length?h("button",{type:"button",class:"chip tpl",onclick:()=>addItems(tr,S.daily,true)},L.daily):null));
-  const sug=suggestions(tr),dm=dailyMissing(tr);
+      S.templates.map(tp=>h("button",{type:"button",class:"chip tpl",onclick:()=>quickTpl(tr,tp,cj)},"+ "+(S.lang==="es"&&tp.nameEs?tp.nameEs:tp.name))),
+      S.daily.length?h("button",{type:"button",class:"chip tpl",onclick:()=>addItems(tr,S.daily,true,null)},L.daily):null));
+  const sug=suggestions(cs.items),dm=dailyMissing(tr);
   if(its.length&&(sug.length||dm.length)){
     addCard.append(h("label",{class:"lb",text:L.forgot}),
       h("div",{class:"chips",id:"forgotChips"},
-        sug.map(s=>h("button",{type:"button",class:"chip sug",onclick:()=>addItems(tr,[{name:s.n,qty:"",color:"",cat:s.c}])},"+ "+s.n)),
-        dm.length?h("button",{type:"button",class:"chip sug",onclick:()=>addItems(tr,dm,true)},`${L.daily} (${dm.length})`):null));
+        sug.map(s=>h("button",{type:"button",class:"chip sug",onclick:()=>addItems(tr,[{name:s.n,qty:"",color:"",cat:s.c}],false,cj)},"+ "+s.n)),
+        dm.length?h("button",{type:"button",class:"chip sug",onclick:()=>addItems(tr,dm,true,null)},`${L.daily} (${dm.length})`):null));
   }
   main.append(addCard);
 
-  /* list */
-  if(its.length){
+  /* list: one block per job, then whole trailer */
+  if(its.length||secs.length>1){
     const list=h("section",{class:"group",id:"leadList"},h("h3",null,h("span",{text:`${L.onList} · ${its.length}`}),h("span",{text:L.tapEdit})));
-    for(const cat of CAT_ORDER){
-      const group=its.filter(i=>(i.cat||"material")===cat); if(!group.length) continue;
-      list.append(h("h3",null,h("span",{text:L.cats[cat]})));
-      for(const it of group){
-        const tmp=!!it._tmp;
-        list.append(h("div",{class:`row${tmp?" tmp":" tap"}${it.done?" done":""}${it.short&&!it.done?" short":""}${it.pickup&&!it.done?" pick":""}`,tabindex:tmp?null:"0",
-          onclick:tmp?null:()=>openEdit(it),onkeydown:tmp?null:e=>{if(e.key==="Enter")openEdit(it);}},
-          h("span",{class:"box"},checkSvg()),
-          h("div",{class:"mid"},h("span",{class:"nm",text:it.name}),tagsFor(it,true),whoLine(it,false)),
-          tmp?null:h("button",{type:"button",class:"iconbtn del","aria-label":`${L.del} ${it.name}`,title:L.del,onclick:e=>{e.stopPropagation();quickDelete(it);}},"✕")));
+    for(const sec of secs){
+      if(!sec.items.length&&!sec.job) continue;
+      if(secs.length>1) list.append(jobHead(sec,true,tr));
+      if(!sec.items.length){list.append(h("p",{class:"note nomat",text:L.noMat}));continue;}
+      for(const cat of CAT_ORDER){
+        const group=sec.items.filter(i=>(i.cat||"material")===cat); if(!group.length) continue;
+        list.append(h("h3",null,h("span",{text:L.cats[cat]})));
+        for(const it of group){
+          const tmp=!!it._tmp;
+          list.append(h("div",{class:`row${tmp?" tmp":" tap"}${it.done?" done":""}${it.short&&!it.done?" short":""}${it.pickup&&!it.done?" pick":""}`,tabindex:tmp?null:"0",
+            onclick:tmp?null:()=>openEdit(it),onkeydown:tmp?null:e=>{if(e.key==="Enter")openEdit(it);}},
+            h("span",{class:"box"},checkSvg()),
+            h("div",{class:"mid"},h("span",{class:"nm",text:it.name}),tagsFor(it,true),whoLine(it,false)),
+            tmp?null:h("button",{type:"button",class:"iconbtn del","aria-label":`${L.del} ${it.name}`,title:L.del,onclick:e=>{e.stopPropagation();quickDelete(it);}},"✕")));
+        }
       }
     }
     main.append(list);
