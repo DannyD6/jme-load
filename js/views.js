@@ -202,7 +202,7 @@ function renderBoss(main){
   const nameIn=h("input",{class:"field full",id:"nameIn",placeholder:L.itemPh,autocomplete:"off",maxlength:"80","aria-label":L.itemPh});
   const qtyIn=h("input",{class:"field",id:"qtyIn",placeholder:L.qtyPh,autocomplete:"off",maxlength:"30","aria-label":L.qtyPh});
   const colorIn=h("input",{class:"field",id:"colorIn",placeholder:L.colorPh,autocomplete:"off",maxlength:"30","aria-label":L.colorPh});
-  const knownNames=[...new Set([...S.templates.flatMap(x=>x.items||[]),...S.daily].map(x=>x.name),...EXTRA_ITEMS].filter(Boolean))];
+  const knownNames=[...new Set([...S.templates.flatMap(x=>x.items||[]),...S.daily].map(x=>x.name).concat(EXTRA_ITEMS).filter(Boolean))];
   const nameWrap=acBox(nameIn,knownNames),colorWrap=acBox(colorIn,COLORS);
   const doAdd=async()=>{
     const n=nameIn.value.trim(); if(!n){nameIn.focus();return;}
