@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JME Load Board</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JME Load">
+<meta name="theme-color" content="#071428">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css?v=1">
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="top">
+    <div class="mark" aria-hidden="true">JME</div>
+    <div class="brand"><b>JME SOLUTIONS</b><span id="tSub">Load Board</span></div>
+    <button class="pill-btn hidden" id="teamBtn" type="button">Team</button>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="lEn" aria-pressed="true">EN</button>
+      <button type="button" id="lEs" aria-pressed="false">ES</button>
+    </div>
+  </header>
+
+  <div class="seg hidden" id="modeSeg" role="group" aria-label="View">
+    <button type="button" id="mCrew" aria-pressed="true">Crew</button>
+    <button type="button" id="mBoss" aria-pressed="false">Lead</button>
+  </div>
+
+  <div class="date hidden" id="dateRow">
+    <button class="arrow" type="button" id="dPrev" aria-label="Previous day">‹</button>
+    <div class="d"><b id="dLabel">&nbsp;</b><span id="dRel"></span></div>
+    <button class="arrow" type="button" id="dNext" aria-label="Next day">›</button>
+  </div>
+
+  <div class="duo" id="duo">
+    <div class="quote"><small id="tStd">The JME standard</small><p id="quote">Every screw matters. Done right or not done.</p></div>
+    <div class="streak" id="streakBox"><small id="tStreak">Zero-forget streak</small><div class="n" id="streakN">0</div><span id="streakTxt">days in a row</span></div>
+  </div>
+
+  <div class="trailers hidden" id="trailers"></div>
+
+  <div id="main" style="display:flex;flex-direction:column;gap:14px"></div>
+
+  <footer class="foot hidden" id="foot"></footer>
+</div>
+
+<div class="dock hidden" id="dock"><div class="in" id="dockIn"></div></div>
+
+<div class="sheet-bg" id="sheetBg"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<div class="party" id="party">
+  <canvas id="confetti"></canvas>
+  <div class="msg">
+    <div class="check"><svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#062814" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <b id="pBig">Ready to roll</b>
+    <p id="pSmall">Trailer is 100% loaded. Let's get it done right.</p>
+    <button class="btn" type="button" id="pClose">Let's go</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/words.js?v=1"></script>
+<script src="js/core.js?v=1"></script>
+<script src="js/views.js?v=1"></script>
+<script src="js/actions.js?v=1"></script>
+</body>
+</html>
