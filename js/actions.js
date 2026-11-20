@@ -7,10 +7,13 @@ function toggleItem(it){
     it.done=now; it.done_by=now?S.me.id:null; it.done_name=now?S.me.name:null; it.done_at=now?new Date().toISOString():null; if(now) it.short=false;
   },it.id).catch(()=>{});
 }
-function toggleShort(it){
-  if(it._tmp) return;
-  const v=!it.short; buzz(30);
-  write("jme_short",{p_token:S.token,p_item:it.id,p_short:v},()=>{it.short=v;},it.id).catch(()=>{});
+function setShort(it,v){
+  if(it._tmp) return; buzz(30);
+  write("jme_short",{p_token:S.token,p_item:it.id,p_short:v},()=>{it.short=v;if(v)it.pickup="";},it.id).catch(()=>{});
+}
+function setPickup(it,shop){
+  if(it._tmp) return; shop=(shop||"").trim().slice(0,40); buzz(30);
+  write("jme_pickup",{p_token:S.token,p_item:it.id,p_shop:shop},()=>{it.pickup=shop;if(shop)it.short=false;},it.id).catch(()=>{});
 }
 async function addItems(tr,list,quiet){
   const have=new Set(itemsFor(tr).map(i=>norm(i.name)));
@@ -49,6 +52,25 @@ function openSheet(...kids){$("sheet").replaceChildren(...kids.flat(3).filter(k=
 function closeSheet(){$("sheetBg").classList.remove("open");}
 $("sheetBg").addEventListener("click",e=>{if(e.target.id==="sheetBg")closeSheet();});
 
+/* not on the trailer: pick up at a shop, or short */
+function openStatus(it){
+  if(it._tmp) return;
+  const L=t(),cur=it.pickup||"",custom=cur&&!SHOPS.includes(cur);
+  const otherIn=h("input",{class:"field",id:"pickOther",placeholder:L.otherPh,maxlength:"40",autocomplete:"off"}); otherIn.value=custom?cur:"";
+  const saveOther=()=>{const v=otherIn.value.trim(); if(!v){otherIn.focus();return;} closeSheet(); setPickup(it,v);};
+  otherIn.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();saveOther();}});
+  const otherRow=h("div",{class:"otherrow"+(custom?"":" hidden")},otherIn,h("button",{type:"button",class:"btn",onclick:saveOther},L.save));
+  openSheet(h("h3",{text:it.name}),
+    h("label",{class:"lb",text:L.pickQ}),
+    h("div",{class:"chips shops"},
+      SHOPS.map(s=>h("button",{type:"button",class:"chip","aria-pressed":String(cur===s),onclick:()=>{closeSheet();setPickup(it,s);}},s)),
+      h("button",{type:"button",class:"chip","aria-pressed":String(!!custom),onclick:()=>{otherRow.classList.remove("hidden");otherIn.focus();}},L.other+"…")),
+    otherRow,
+    h("button",{type:"button",class:"btn danger","aria-pressed":String(!!it.short),onclick:()=>{closeSheet();setShort(it,!it.short);}},(it.short?"✓ ":"⚠ ")+L.shortOpt),
+    (cur||it.short)?h("button",{type:"button",class:"btn ghost",onclick:()=>{closeSheet();if(cur)setPickup(it,"");if(it.short)setShort(it,false);}},L.clearSt):null,
+    h("button",{type:"button",class:"btn ghost",onclick:closeSheet},L.cancel));
+}
+
 function openEdit(it){
   const L=t();
   const n=h("input",{class:"field",id:"eName",maxlength:"80"}); n.value=it.name;
@@ -67,6 +89,7 @@ function openEdit(it){
     h("label",{class:"lb",for:"eName",text:L.itemPh}),n,
     h("div",{class:"addgrid"},h("div",null,h("label",{class:"lb",for:"eColor",text:L.colorPh}),cWrap),h("div",null,h("label",{class:"lb",for:"eQty",text:L.qtyPh}),q)),
     h("label",{class:"lb",for:"eCat",text:L.section}),cat,
+    it.done?null:h("button",{type:"button",class:"btn ghost",onclick:()=>{closeSheet();openStatus(it);}},"🏪 "+L.moreBtn),
     h("button",{type:"button",class:"btn",id:"eSave",onclick:save},L.save),
     h("button",{type:"button",class:"btn danger",onclick:()=>{closeSheet();quickDelete(it);}},L.del),
     h("button",{type:"button",class:"btn ghost",onclick:closeSheet},L.cancel));
@@ -172,7 +195,7 @@ function shareList(){
   for(const tr of TRAILERS){
     const its=itemsFor(tr); if(!its.length) continue; const ld=S.loads[tr]||{};
     out+=`\n${(tr==="old"?L.old:L.neu).toUpperCase()}${ld.lead?` (${ld.lead})`:""}\n`;
-    for(const i of its) out+=`${i.done?"✅":"⬜"} ${i.name}${i.qty?` – ${i.qty}`:""}${i.color?` – ${i.color}`:""}\n`;
+    for(const i of its) out+=`${i.done?"✅":i.pickup?"🏪":"⬜"} ${i.name}${i.qty?` – ${i.qty}`:""}${i.color?` – ${i.color}`:""}${i.pickup&&!i.done?` (${L.pickAt(i.pickup)})`:""}\n`;
   }
   shareText(out);
 }

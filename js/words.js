@@ -5,7 +5,7 @@ const CFG={url:"https://xqguwwhogubzvmrxsauj.supabase.co",key:"sb_publishable_Vg
 const T={
   en:{sub:"Load Board",crew:"Crew",boss:"Lead",std:"The JME standard",streak:"Zero-forget streak",days:"days in a row",day:"day in a row",
     today:"Today",tomorrow:"Tomorrow",yesterday:"Yesterday",old:"Old trailer",neu:"New trailer",lead:"Lead",noLead:"No lead set",
-    loaded:"loaded",of:"of",ready:"Ready to roll",left:"left to load",nothing:"No load yet",short:"Short",
+    loaded:"loaded",of:"of",ready:"Ready to roll",left:"left to load",nothing:"No load yet",short:"Short",pickAt:s=>`Pick up at ${s}`,pickQ:"Pick up at a shop",other:"Other",otherPh:"Shop name",shortOpt:"Short – tell a lead",clearSt:"Clear – back to normal",readyPick:n=>`Ready to roll · ${n} to pick up`,dockGoPick:n=>`Ready to roll. ${n} to pick up`,pickList:"Pick up:",moreBtn:"Pick up / short",
     emptyCrewT:"Nothing on this trailer yet",emptyCrewP:"A lead will add the load here.",
     dockWait:n=>`${n} left. Don't roll yet`,dockGo:"Ready to roll. Let's go",dockShort:n=>`${n} short. Tell a lead`,
     pBig:"Ready to roll",pSmall:"Trailer is 100% loaded. Let's get it done right.",pClose:"Let's go",
@@ -38,7 +38,7 @@ const T={
     installBtn:"Install app",gotIt:"Got it"},
   es:{sub:"Tablero de carga",crew:"Cuadrilla",boss:"Líder",std:"El estándar JME",streak:"Racha sin olvidos",days:"días seguidos",day:"día seguido",
     today:"Hoy",tomorrow:"Mañana",yesterday:"Ayer",old:"Tráiler viejo",neu:"Tráiler nuevo",lead:"Líder",noLead:"Sin líder",
-    loaded:"cargado",of:"de",ready:"Listos para salir",left:"falta cargar",nothing:"Sin carga",short:"Falta",
+    loaded:"cargado",of:"de",ready:"Listos para salir",left:"falta cargar",nothing:"Sin carga",short:"Falta",pickAt:s=>`Recoger en ${s}`,pickQ:"Recoger en una tienda",other:"Otra",otherPh:"Nombre de la tienda",shortOpt:"Falta – avisar a un líder",clearSt:"Quitar – volver a normal",readyPick:n=>`Listos · ${n} por recoger`,dockGoPick:n=>`Listos para salir. ${n} por recoger`,pickList:"Recoger:",moreBtn:"Recoger / falta",
     emptyCrewT:"Este tráiler aún no tiene carga",emptyCrewP:"Un líder pondrá la carga aquí.",
     dockWait:n=>`Faltan ${n}. No salgan todavía`,dockGo:"Listos para salir. Vámonos",dockShort:n=>`Faltan ${n} en bodega. Avisen a un líder`,
     pBig:"Listos para salir",pSmall:"El tráiler está 100% cargado. A hacerlo bien.",pClose:"Vámonos",
@@ -88,6 +88,8 @@ const CAT_ORDER=["material","guard","fittings","fasteners","gear"];
 const TRAILERS=["old","new"];
 /* extra materials offered in the type-ahead list (not tied to a template) */
 const EXTRA_ITEMS=["Wedges","6” Shur Flo Guard","5” Shur Flo Guard","Leafblaster guard","Leaf Free guard","Gutter Rx guard"];
+/* supply houses for "pick up at a shop" */
+const SHOPS=["Senox","Spectra","QXO (Monroe)","QXO (Concord)"];
 const COLORS=["White","White low gloss","Low gloss","Black","Musket brown","Royal brown","Clay","Almond","Bronze","Gray","Ivory","Mill finish"];
 
 /* forget-prevention rules: when the list has X, it should usually also have Y */

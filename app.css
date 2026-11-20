@@ -198,3 +198,11 @@ textarea.field{resize:vertical;min-height:64px}
 .acbox button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--white);padding:12px;font-size:16px;font-family:var(--body)}
 .acbox button:last-child{border-bottom:0}
 .acbox button.hi,.acbox button:active{background:var(--navy-600)}
+/* pick up at a shop */
+.row.pick{border-color:rgba(90,169,255,.55);background:rgba(90,169,255,.07)}
+.tag.pick{background:rgba(90,169,255,.18);color:var(--sky)}
+.iconbtn.pick{border-color:var(--sky);color:var(--sky)}
+.shops .chip{padding:11px 15px;font-size:15px}
+.shops .chip[aria-pressed="true"]{background:var(--sky);border-color:var(--sky);color:var(--navy-900)}
+.otherrow{display:flex;gap:8px}
+.otherrow .btn{flex:none;padding:11px 16px;font-size:17px}
