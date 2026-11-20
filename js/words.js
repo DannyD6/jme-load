@@ -86,6 +86,8 @@ const QUOTES=[
 ];
 const CAT_ORDER=["material","guard","fittings","fasteners","gear"];
 const TRAILERS=["old","new"];
+/* extra materials offered in the type-ahead list (not tied to a template) */
+const EXTRA_ITEMS=["Wedges","6” Shur Flo Guard","5” Shur Flo Guard","Leafblaster guard","Leaf Free guard","Gutter Rx guard"];
 const COLORS=["White","White low gloss","Low gloss","Black","Musket brown","Royal brown","Clay","Almond","Bronze","Gray","Ivory","Mill finish"];
 
 /* forget-prevention rules: when the list has X, it should usually also have Y */
@@ -96,13 +98,13 @@ const RULES=[
     {n:"Zips",m:/zip/i,c:"fasteners"},{n:"Silicone",m:/silicon|seal/i,c:"fasteners"}]},
   {when:/downspout|spout|2x3|3x4|bajante/i,need:[
     {n:"Elbows",m:/elbow|codo/i,c:"fittings"},{n:"Bandas",m:/banda|strap/i,c:"fasteners"},{n:"Outlets",m:/outlet|salida/i,c:"fittings"}]},
-  {when:/guard|leaf ?blaster|ez ?flow|shurflo|mesh|protector/i,need:[
+  {when:/guard|leaf ?blaster|leaf ?free|gutter ?rx|ez ?flow|shur ?flo|mesh|protector/i,need:[
     {n:"Long screws",m:/long screw|screw|tornillo/i,c:"fasteners"}]}
 ];
 function autoCat(name){
   const s=(name||"").toLowerCase();
-  if(/guard|leaf ?blaster|ez ?flow|shurflo|mesh|protector/.test(s)) return "guard";
-  if(/end ?cap|miter|corner|outlet|elbow|adapter|tapa|codo|esquina|salida/.test(s)) return "fittings";
+  if(/guard|leaf ?blaster|leaf ?free|gutter ?rx|ez ?flow|shur ?flo|mesh|protector/.test(s)) return "guard";
+  if(/wedge|end ?cap|miter|corner|outlet|elbow|adapter|tapa|codo|esquina|salida/.test(s)) return "fittings";
   if(/hanger|zip|screw|banda|strap|silicon|seal|caulk|paint|rivet|nail|pintura|tornillo/.test(s)) return "fasteners";
   if(/generator|blower|ladder|stand|cooler|drill|cord|tool|bender|crimper|snips|hielera|escalera/.test(s)) return "gear";
   return "material";
