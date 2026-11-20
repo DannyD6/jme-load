@@ -188,7 +188,7 @@ function renderBoss(main){
     h("button",{type:"button",class:"btn",id:"addBtn",onclick:doAdd},L.addBtn),
     h("label",{class:"lb",text:L.quick}),
     h("div",{class:"chips",id:"quickChips"},
-      S.templates.map(tp=>h("button",{type:"button",class:"chip tpl",onclick:()=>addItems(tr,tp.items||[],true)},"+ "+(S.lang==="es"&&tp.nameEs?tp.nameEs:tp.name))),
+      S.templates.map(tp=>h("button",{type:"button",class:"chip tpl",onclick:()=>quickTpl(tr,tp)},"+ "+(S.lang==="es"&&tp.nameEs?tp.nameEs:tp.name))),
       S.daily.length?h("button",{type:"button",class:"chip tpl",onclick:()=>addItems(tr,S.daily,true)},L.daily):null));
   const sug=suggestions(tr),dm=dailyMissing(tr);
   if(its.length&&(sug.length||dm.length)){

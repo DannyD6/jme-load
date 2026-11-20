@@ -87,6 +87,19 @@ function openForget(){
 }
 const toLines=list=>(list||[]).map(x=>[x.name,x.qty||"",x.color||""].join(" | ").replace(/( \| )+$/,"")).join("\n");
 const fromLines=txt=>txt.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{const [name,qty,color]=l.split("|").map(s=>(s||"").trim());return{name:(name||"").slice(0,80),qty:(qty||"").slice(0,30),color:(color||"").slice(0,30),cat:autoCat(name)};}).filter(x=>x.name);
+/* downspout size pick for templates that load downspouts (3x4 is the default) */
+const SPOUT_RE=/downspout|elbow|outlet|bajante|codo|salida|2x3|3x4/i;
+function to2x3(items){return (items||[]).map(x=>{const n=String(x.name||"");if(!SPOUT_RE.test(n))return x;
+  return {...x,name:/3x4/i.test(n)?n.replace(/3x4/gi,"2x3"):(/2x3/i.test(n)?n:("2x3 "+n.charAt(0).toLowerCase()+n.slice(1)).slice(0,80))};});}
+function quickTpl(tr,tp){
+  const items=tp.items||[];
+  if(!items.some(x=>SPOUT_RE.test(String(x.name||"")))){addItems(tr,items,true);return;}
+  const L=t(),name=S.lang==="es"&&tp.nameEs?tp.nameEs:tp.name;
+  openSheet(h("h3",{text:name}),h("p",{class:"note",text:L.spoutQ}),
+    h("button",{type:"button",class:"btn",onclick:()=>{closeSheet();addItems(tr,items,true);}},L.spout34),
+    h("button",{type:"button",class:"btn ghost",onclick:()=>{closeSheet();addItems(tr,to2x3(items),true);}},L.spout23),
+    h("button",{type:"button",class:"btn ghost",onclick:closeSheet},L.cancel));
+}
 function openTemplates(){
   const L=t();
   const areas=S.templates.map((tp,i)=>{const a=h("textarea",{class:"field",id:"tpl"+i,rows:"10"});a.value=toLines(tp.items);return a;});
